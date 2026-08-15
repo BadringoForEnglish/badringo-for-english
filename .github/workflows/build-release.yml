@@ -9,6 +9,9 @@ on:
 jobs:
   build-windows-exe:
     runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: badringo
 
     steps:
       - name: Récupérer le code
@@ -29,4 +32,4 @@ jobs:
       - name: Attacher le .exe à la Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/BadringoForEnglish.exe
+          files: badringo/dist/BadringoForEnglish.exe
