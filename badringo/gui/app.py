@@ -12,6 +12,7 @@ from gui.grammar_view import GrammarView
 from gui.errors_view import ErrorsView
 from gui.chat_view import ChatView
 from gui.stats_view import StatsView
+from gui.quiz_view import QuizView
 import updater
 
 COULEURS = {
@@ -53,6 +54,7 @@ class BadringoApp(tk.Tk):
             ("📚 Vocabulaire", "vocab"),
             ("📖 Grammaire & Conjugaison", "grammar"),
             ("📝 Journal d'erreurs", "errors"),
+            ("🎯 Quiz", "quiz"),
             ("💬 Chat / Pratique", "chat"),
         ]
         for label, cle in boutons:
@@ -120,6 +122,7 @@ class BadringoApp(tk.Tk):
             "vocab": VocabView,
             "grammar": GrammarView,
             "errors": ErrorsView,
+            "quiz": QuizView,
             "chat": ChatView,
         }
         vue_class = classes[cle]

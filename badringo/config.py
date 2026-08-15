@@ -7,7 +7,7 @@ import os
 import json
 
 APP_NAME = "Badringo for English"
-APP_VERSION = "1.2.2"
+APP_VERSION = "1.3.0"
 
 # Dossiers
 # En version .exe (PyInstaller --onefile), le programme s'exécute depuis un
