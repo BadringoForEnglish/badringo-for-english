@@ -70,6 +70,13 @@ def main():
     if not executer(["git", "add", "-A"]):
         sys.exit(1)
     executer(["git", "commit", "-m", f"Version {nouvelle_version}"])  # rien à commit -> pas grave
+
+    print("\n   Récupération des éventuels changements distants...")
+    if not executer(["git", "pull", "origin", "main", "--no-edit"]):
+        print("\n❌ Échec de la récupération. Résous le conflit manuellement puis relance.")
+        input("\nAppuie sur Entrée pour fermer...")
+        sys.exit(1)
+
     if not executer(["git", "push", "origin", "main"]):
         print("\n❌ Échec de l'envoi du code. Vérifie ta connexion / tes identifiants GitHub.")
         input("\nAppuie sur Entrée pour fermer...")
