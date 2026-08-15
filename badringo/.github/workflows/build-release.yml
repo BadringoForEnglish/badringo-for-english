@@ -1,0 +1,32 @@
+name: Build and Release
+
+# Se déclenche automatiquement à chaque fois qu'une "Release" est publiée
+# sur GitHub (bouton "Publish release"). Aucune action locale nécessaire.
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-windows-exe:
+    runs-on: windows-latest
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les dépendances
+        run: pip install -r requirements.txt
+
+      - name: Compiler l'exécutable
+        run: |
+          pyinstaller --noconfirm --onefile --windowed --name BadringoForEnglish main.py
+
+      - name: Attacher le .exe à la Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/BadringoForEnglish.exe
