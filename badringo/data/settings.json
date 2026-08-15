@@ -1,0 +1,9 @@
+{
+    "theme": "light",
+    "window_width": 1100,
+    "window_height": 700,
+    "ollama_url": "http://localhost:11434",
+    "ollama_model": "llama3.2",
+    "user_name": "Utilisateur",
+    "last_update_check": ""
+}

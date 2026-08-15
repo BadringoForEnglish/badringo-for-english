@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent
-CONFIG_PATH = BASE_DIR / "config.py"
+CONFIG_PATH = BASE_DIR / "badringo" / "config.py"
 
 
 def lire_version_actuelle():
