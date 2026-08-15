@@ -1,10 +1,16 @@
 name: Build and Release
 
-# Se déclenche automatiquement à chaque fois qu'une "Release" est publiée
-# sur GitHub (bouton "Publish release"). Aucune action locale nécessaire.
+# Se déclenche automatiquement dès qu'un tag "vX.Y.Z" est envoyé sur GitHub
+# (via le script publier_nouvelle_version.bat en un clic). GitHub crée la
+# Release lui-même et y attache le .exe compilé. Aucune action manuelle
+# sur le site GitHub n'est nécessaire.
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
 
 jobs:
   build-windows-exe:
@@ -29,7 +35,10 @@ jobs:
         run: |
           pyinstaller --noconfirm --onefile --windowed --name BadringoForEnglish main.py
 
-      - name: Attacher le .exe à la Release
+      - name: Créer la Release et attacher le .exe
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
           files: badringo/dist/BadringoForEnglish.exe
