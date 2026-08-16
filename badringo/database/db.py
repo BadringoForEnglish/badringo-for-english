@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS regles_grammaire (
     categorie TEXT NOT NULL,                -- 'conjugaison' ou 'grammaire'
     titre TEXT NOT NULL,
     explication TEXT NOT NULL,
+    commentaire TEXT,
     exemples TEXT,
     niveau_maitrise INTEGER DEFAULT 0,
     date_ajout TEXT DEFAULT (datetime('now'))
@@ -78,4 +79,11 @@ def init_db():
     conn = get_connection()
     with conn:
         conn.executescript(SCHEMA)
+    # Migration légère : ajoute la colonne 'commentaire' si la base existait
+    # déjà avant son introduction (ne fait rien si elle est déjà présente).
+    try:
+        with conn:
+            conn.execute("ALTER TABLE regles_grammaire ADD COLUMN commentaire TEXT")
+    except Exception:
+        pass  # colonne déjà existante
     conn.close()

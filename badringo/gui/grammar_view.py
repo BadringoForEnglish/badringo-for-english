@@ -45,24 +45,37 @@ class GrammarView(tk.Frame):
         form = tk.Frame(parent, bg="white")
         form.pack(fill="x", padx=10, pady=10)
 
-        tk.Label(form, text="Catégorie", bg="white").grid(row=0, column=0, sticky="w")
-        self.categorie = ttk.Combobox(form, values=["conjugaison", "grammaire"], width=15, state="readonly")
+        ligne_haut = tk.Frame(form, bg="white")
+        ligne_haut.pack(fill="x")
+
+        tk.Label(ligne_haut, text="Catégorie", bg="white").grid(row=0, column=0, sticky="w")
+        self.categorie = ttk.Combobox(ligne_haut, values=["conjugaison", "grammaire"], width=15, state="readonly")
         self.categorie.set("conjugaison")
-        self.categorie.grid(row=1, column=0, padx=(0, 10))
+        self.categorie.grid(row=1, column=0, padx=(0, 10), sticky="w")
 
-        tk.Label(form, text="Titre", bg="white").grid(row=0, column=1, sticky="w")
-        self.titre = tk.Entry(form, width=25)
-        self.titre.grid(row=1, column=1, padx=(0, 10))
+        tk.Label(ligne_haut, text="Titre", bg="white").grid(row=0, column=1, sticky="w")
+        self.titre = tk.Entry(ligne_haut, width=40)
+        self.titre.grid(row=1, column=1, padx=(0, 10), sticky="w")
 
-        tk.Label(form, text="Explication", bg="white").grid(row=0, column=2, sticky="w")
-        self.explication = tk.Entry(form, width=40)
-        self.explication.grid(row=1, column=2, padx=(0, 10))
+        tk.Button(ligne_haut, text="Ajouter", command=self.ajouter_regle).grid(row=1, column=2, padx=10)
 
-        tk.Label(form, text="Exemples", bg="white").grid(row=0, column=3, sticky="w")
-        self.exemples = tk.Entry(form, width=30)
-        self.exemples.grid(row=1, column=3)
+        # Zones multi-lignes : Explication / Commentaire / Exemples, côte à côte.
+        # Contrairement à un Entry classique, un Text permet d'aller à la ligne
+        # (touche Entrée) en tapant du texte plus long.
+        ligne_textes = tk.Frame(form, bg="white")
+        ligne_textes.pack(fill="x", pady=(10, 0))
 
-        tk.Button(form, text="Ajouter", command=self.ajouter_regle).grid(row=1, column=4, padx=10)
+        tk.Label(ligne_textes, text="Explication", bg="white").grid(row=0, column=0, sticky="w")
+        self.explication = tk.Text(ligne_textes, width=30, height=4, wrap="word")
+        self.explication.grid(row=1, column=0, padx=(0, 10), sticky="w")
+
+        tk.Label(ligne_textes, text="Commentaire", bg="white").grid(row=0, column=1, sticky="w")
+        self.commentaire = tk.Text(ligne_textes, width=30, height=4, wrap="word")
+        self.commentaire.grid(row=1, column=1, padx=(0, 10), sticky="w")
+
+        tk.Label(ligne_textes, text="Exemples", bg="white").grid(row=0, column=2, sticky="w")
+        self.exemples = tk.Text(ligne_textes, width=30, height=4, wrap="word")
+        self.exemples.grid(row=1, column=2, sticky="w")
 
         self.liste_frame = tk.Frame(parent, bg="white")
         self.liste_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -71,13 +84,16 @@ class GrammarView(tk.Frame):
 
     def ajouter_regle(self):
         titre = self.titre.get().strip()
-        explication = self.explication.get().strip()
+        explication = self.explication.get("1.0", "end").strip()
+        commentaire = self.commentaire.get("1.0", "end").strip()
+        exemples = self.exemples.get("1.0", "end").strip()
         if not titre or not explication:
             messagebox.showwarning("Champs manquants", "Le titre et l'explication sont obligatoires.")
             return
-        models.ajouter_regle(self.categorie.get(), titre, explication, self.exemples.get().strip())
-        for e in (self.titre, self.explication, self.exemples):
-            e.delete(0, tk.END)
+        models.ajouter_regle(self.categorie.get(), titre, explication, commentaire, exemples)
+        self.titre.delete(0, tk.END)
+        for zone in (self.explication, self.commentaire, self.exemples):
+            zone.delete("1.0", "end")
         self._rafraichir_regles()
 
     def _rafraichir_regles(self):
@@ -96,6 +112,8 @@ class GrammarView(tk.Frame):
                 carte, text=f"[{r['categorie']}] {r['titre']}", font=("Segoe UI", 11, "bold"), bg="#f0f0f0"
             ).pack(anchor="w")
             tk.Label(carte, text=r["explication"], bg="#f0f0f0", wraplength=800, justify="left").pack(anchor="w")
+            if r["commentaire"]:
+                tk.Label(carte, text=f"Commentaire : {r['commentaire']}", bg="#f0f0f0", fg="#2563eb", wraplength=800, justify="left").pack(anchor="w")
             if r["exemples"]:
                 tk.Label(carte, text=f"Exemples : {r['exemples']}", bg="#f0f0f0", fg="#555", wraplength=800, justify="left").pack(anchor="w")
             tk.Button(carte, text="Supprimer", command=lambda rid=r["id"]: self._supprimer_regle(rid)).pack(anchor="e")

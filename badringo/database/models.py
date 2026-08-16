@@ -82,12 +82,12 @@ def reviser_mot(mot_id, reussi: bool):
 
 # ----------------------- GRAMMAIRE / CONJUGAISON -----------------------
 
-def ajouter_regle(categorie, titre, explication, exemples=""):
+def ajouter_regle(categorie, titre, explication, commentaire="", exemples=""):
     conn = get_connection()
     with conn:
         conn.execute(
-            "INSERT INTO regles_grammaire (categorie, titre, explication, exemples) VALUES (?, ?, ?, ?)",
-            (categorie, titre, explication, exemples)
+            "INSERT INTO regles_grammaire (categorie, titre, explication, commentaire, exemples) VALUES (?, ?, ?, ?, ?)",
+            (categorie, titre, explication, commentaire, exemples)
         )
     conn.close()
 

@@ -117,3 +117,58 @@ def demander_correction_et_reponse(message_utilisateur, historique=None):
         return resultat
     except json.JSONDecodeError:
         return {"reponse": texte, "erreurs": []}
+
+
+PROMPT_TRADUCTION = """You are a French-to-English translator for a language
+learner. Given a French word or short phrase, respond ONLY with a valid JSON
+object, no text before or after, in exactly this form:
+
+{"traduction": "the English translation", "exemple": "a short simple example sentence in English using that word"}
+
+If several translations are possible, give the most common one."""
+
+
+def traduire_mot(mot_francais):
+    """
+    Traduit un mot/expression du français vers l'anglais via Ollama.
+    Renvoie {"traduction": str, "exemple": str} ou None en cas d'échec.
+    """
+    if not ollama_est_disponible():
+        return None
+
+    payload = json.dumps({
+        "model": _ollama_model(),
+        "messages": [
+            {"role": "system", "content": PROMPT_TRADUCTION},
+            {"role": "user", "content": mot_francais}
+        ],
+        "stream": False
+    }).encode("utf-8")
+
+    request = urllib.request.Request(
+        f"{_ollama_url()}/api/chat",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        texte = data.get("message", {}).get("content", "")
+    except Exception:
+        return None
+
+    texte_propre = re.sub(r"^```json|```$", "", texte.strip(), flags=re.MULTILINE).strip()
+    match = re.search(r"\{.*\}", texte_propre, flags=re.DOTALL)
+    if match:
+        texte_propre = match.group(0)
+
+    try:
+        resultat = json.loads(texte_propre)
+        if "traduction" not in resultat:
+            return None
+        resultat.setdefault("exemple", "")
+        return resultat
+    except json.JSONDecodeError:
+        return None
