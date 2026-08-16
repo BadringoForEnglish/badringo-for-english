@@ -4,6 +4,7 @@ Fenêtre principale : barre latérale de navigation + zone de contenu.
 """
 
 import shutil
+import threading
 from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
@@ -162,15 +163,51 @@ class BadringoApp(tk.Tk):
         if not reponse:
             return
 
-        try:
-            chemin = updater.download_update(resultat["exe_url"])
+        self._lancer_telechargement_avec_progression(resultat["exe_url"])
+
+    def _lancer_telechargement_avec_progression(self, exe_url):
+        fenetre = tk.Toplevel(self)
+        fenetre.title("Téléchargement en cours")
+        fenetre.geometry("400x120")
+        fenetre.resizable(False, False)
+        fenetre.transient(self)
+        fenetre.grab_set()  # bloque uniquement cette petite fenêtre, pas l'appli entière
+
+        tk.Label(fenetre, text="Téléchargement de la mise à jour...", font=("Segoe UI", 11)).pack(pady=(20, 10))
+
+        barre = ttk.Progressbar(fenetre, orient="horizontal", length=340, mode="determinate")
+        barre.pack(pady=5)
+
+        pourcentage_label = tk.Label(fenetre, text="0 %", font=("Segoe UI", 9), fg="#666")
+        pourcentage_label.pack()
+
+        def mettre_a_jour_barre(pourcentage):
+            barre["value"] = pourcentage
+            pourcentage_label.config(text=f"{pourcentage} %")
+
+        def telecharger_en_arriere_plan():
+            try:
+                chemin = updater.download_update(
+                    exe_url,
+                    progress_callback=lambda p: self.after(0, mettre_a_jour_barre, p)
+                )
+                self.after(0, telechargement_termine, chemin)
+            except Exception as e:
+                self.after(0, telechargement_echoue, e)
+
+        def telechargement_termine(chemin):
+            fenetre.destroy()
             messagebox.showinfo(
                 "Mise à jour",
                 "Téléchargement terminé. L'application va redémarrer pour terminer l'installation."
             )
             updater.apply_update(chemin)
-        except Exception as e:
-            messagebox.showerror("Erreur", f"Échec de la mise à jour : {e}")
+
+        def telechargement_echoue(erreur):
+            fenetre.destroy()
+            messagebox.showerror("Erreur", f"Échec de la mise à jour : {erreur}")
+
+        threading.Thread(target=telecharger_en_arriere_plan, daemon=True).start()
 
     def afficher_vue(self, cle):
         for widget in self.content.winfo_children():
