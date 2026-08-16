@@ -7,7 +7,7 @@ import os
 import json
 
 APP_NAME = "Badringo for English"
-APP_VERSION = "1.3.1"
+APP_VERSION = "1.3.2"
 
 # Dossiers
 # En version .exe (PyInstaller --onefile), le programme s'exécute depuis un
@@ -38,7 +38,10 @@ DEFAULT_SETTINGS = {
     "ollama_url": "http://localhost:11434",   # adresse du serveur Ollama local
     "ollama_model": "llama3.2",               # modèle local à utiliser pour le chat
     "user_name": "Utilisateur",
-    "last_update_check": ""
+    "last_update_check": "",
+    "chat_font_family": "Segoe UI",           # police d'affichage du chat
+    "chat_font_size": 12,                     # taille d'affichage du chat
+    "conversation_active_id": None            # id de la conversation en cours (persistance)
 }
 
 

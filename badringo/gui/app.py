@@ -3,10 +3,12 @@ gui/app.py
 Fenêtre principale : barre latérale de navigation + zone de contenu.
 """
 
+import shutil
+from datetime import datetime
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 
-from config import APP_NAME, APP_VERSION, load_settings, save_settings
+from config import APP_NAME, APP_VERSION, DB_PATH, load_settings, save_settings
 from gui.vocab_view import VocabView
 from gui.grammar_view import GrammarView
 from gui.errors_view import ErrorsView
@@ -81,6 +83,63 @@ class BadringoApp(tk.Tk):
             padx=20, pady=8, command=self.verifier_mises_a_jour
         )
         btn_maj.pack(side="bottom", fill="x")
+
+        btn_restaurer = tk.Button(
+            self.sidebar, text="📂 Restaurer une sauvegarde", anchor="w", relief="flat",
+            bg=couleurs["sidebar"], fg=couleurs["text"], font=("Segoe UI", 9),
+            padx=20, pady=8, command=self.restaurer_sauvegarde
+        )
+        btn_restaurer.pack(side="bottom", fill="x")
+
+        btn_sauvegarder = tk.Button(
+            self.sidebar, text="💾 Sauvegarder mes données", anchor="w", relief="flat",
+            bg=couleurs["sidebar"], fg=couleurs["text"], font=("Segoe UI", 9),
+            padx=20, pady=8, command=self.sauvegarder_donnees
+        )
+        btn_sauvegarder.pack(side="bottom", fill="x")
+
+    def sauvegarder_donnees(self):
+        nom_par_defaut = f"badringo_sauvegarde_{datetime.now().strftime('%Y-%m-%d')}.db"
+        destination = filedialog.asksaveasfilename(
+            title="Enregistrer la sauvegarde",
+            defaultextension=".db",
+            initialfile=nom_par_defaut,
+            filetypes=[("Base de données Badringo", "*.db")]
+        )
+        if not destination:
+            return
+        try:
+            shutil.copy2(DB_PATH, destination)
+            messagebox.showinfo("Sauvegarde", "Tes données ont été sauvegardées avec succès.")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Échec de la sauvegarde : {e}")
+
+    def restaurer_sauvegarde(self):
+        reponse = messagebox.askyesno(
+            "Restaurer une sauvegarde",
+            "Cela va REMPLACER toutes tes données actuelles (vocabulaire, grammaire, "
+            "erreurs, conversations) par celles du fichier de sauvegarde.\n\n"
+            "Cette action est irréversible. Continuer ?"
+        )
+        if not reponse:
+            return
+
+        source = filedialog.askopenfilename(
+            title="Choisir un fichier de sauvegarde",
+            filetypes=[("Base de données Badringo", "*.db")]
+        )
+        if not source:
+            return
+
+        try:
+            shutil.copy2(source, DB_PATH)
+            messagebox.showinfo(
+                "Restauration réussie",
+                "Tes données ont été restaurées. Ferme et rouvre l'application pour "
+                "voir les changements."
+            )
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Échec de la restauration : {e}")
 
     def verifier_mises_a_jour(self):
         resultat = updater.check_for_updates()

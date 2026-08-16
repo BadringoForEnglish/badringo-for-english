@@ -176,6 +176,13 @@ def lister_conversations():
     return rows
 
 
+def conversation_existe(conversation_id):
+    conn = get_connection()
+    row = conn.execute("SELECT id FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
+    conn.close()
+    return row is not None
+
+
 # ----------------------- STATISTIQUES -----------------------
 
 def statistiques():
