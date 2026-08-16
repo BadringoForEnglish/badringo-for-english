@@ -119,18 +119,21 @@ def demander_correction_et_reponse(message_utilisateur, historique=None):
         return {"reponse": texte, "erreurs": []}
 
 
-PROMPT_TRADUCTION = """You are a French-to-English translator for a language
-learner. Given a French word or short phrase, respond ONLY with a valid JSON
-object, no text before or after, in exactly this form:
+PROMPT_TRADUCTION = """You are an English-to-French translator for a language
+learner, working like a translation tool (word, short phrase, or full
+sentence). Given English text, respond ONLY with a valid JSON object, no
+text before or after, in exactly this form:
 
-{"traduction": "the English translation", "exemple": "a short simple example sentence in English using that word"}
+{"traduction": "the French translation", "exemple": "the original English text, unchanged, or a short simple example sentence in English if only a single word was given"}
 
 If several translations are possible, give the most common one."""
 
 
-def traduire_mot(mot_francais):
+def traduire_mot(texte_anglais):
     """
-    Traduit un mot/expression du français vers l'anglais via Ollama.
+    Traduit un mot, une expression ou une phrase de l'anglais vers le
+    français via Ollama (fonctionne comme un traducteur type Google
+    Traduction, en local et gratuitement).
     Renvoie {"traduction": str, "exemple": str} ou None en cas d'échec.
     """
     if not ollama_est_disponible():
@@ -140,7 +143,7 @@ def traduire_mot(mot_francais):
         "model": _ollama_model(),
         "messages": [
             {"role": "system", "content": PROMPT_TRADUCTION},
-            {"role": "user", "content": mot_francais}
+            {"role": "user", "content": texte_anglais}
         ],
         "stream": False
     }).encode("utf-8")

@@ -98,12 +98,19 @@ class ChatView(tk.Frame):
         bas = tk.Frame(self, bg="white")
         bas.pack(fill="x", padx=20, pady=(0, 20))
 
-        self.entree = tk.Entry(bas, font=self._police())
+        self.entree = tk.Text(bas, font=self._police(), height=3, wrap="word")
         self.entree.pack(side="left", fill="x", expand=True, padx=(0, 10))
-        self.entree.bind("<Return>", lambda e: self.envoyer())
+        self.entree.bind("<Return>", self._touche_entree)
 
         self.bouton_envoyer = tk.Button(bas, text="Envoyer", command=self.envoyer)
         self.bouton_envoyer.pack(side="left")
+
+    def _touche_entree(self, event):
+        """Entrée seule envoie le message ; Maj+Entrée insère un retour à la ligne."""
+        if event.state & 0x1:  # touche Maj (Shift) enfoncée
+            return None  # comportement normal du Text : insère la nouvelle ligne
+        self.envoyer()
+        return "break"  # empêche le Text d'insérer aussi une nouvelle ligne
 
     # ------------------------------------------------------------------
     def _police(self, gras=False, italique=False):
@@ -185,10 +192,10 @@ class ChatView(tk.Frame):
         if self.en_attente:
             return  # une réponse est déjà en cours, on ignore les envois multiples
 
-        message = self.entree.get().strip()
+        message = self.entree.get("1.0", "end").strip()
         if not message:
             return
-        self.entree.delete(0, tk.END)
+        self.entree.delete("1.0", "end")
 
         self._ecrire_message("Toi", message, "utilisateur")
         models.ajouter_message(self.conversation_id, "utilisateur", message)

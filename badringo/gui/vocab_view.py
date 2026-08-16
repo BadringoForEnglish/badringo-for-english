@@ -21,25 +21,28 @@ class VocabView(tk.Frame):
             anchor="w", padx=20, pady=(20, 10)
         )
 
-        # --- Traducteur FR -> EN (via Ollama) ---
+        # --- Traducteur EN -> FR (via Ollama), mot, expression ou phrase ---
         traducteur = tk.Frame(self, bg="#f0f4ff", padx=15, pady=10)
         traducteur.pack(fill="x", padx=20, pady=(0, 15))
 
-        tk.Label(traducteur, text="Traducteur : mot en français →", bg="#f0f4ff").pack(side="left")
-        self.entree_fr = tk.Entry(traducteur, width=20)
-        self.entree_fr.pack(side="left", padx=5)
-        self.entree_fr.bind("<Return>", lambda e: self.traduire())
+        tk.Label(traducteur, text="Traducteur : texte en anglais →", bg="#f0f4ff").pack(side="left", anchor="n")
+
+        self.entree_source = tk.Text(traducteur, width=30, height=2, wrap="word")
+        self.entree_source.pack(side="left", padx=5)
+        self.entree_source.bind("<Return>", self._touche_traducteur)
 
         self.bouton_traduire = tk.Button(traducteur, text="Traduire", command=self.traduire)
-        self.bouton_traduire.pack(side="left", padx=5)
+        self.bouton_traduire.pack(side="left", padx=5, anchor="n")
 
-        self.resultat_traduction = tk.Label(traducteur, text="", bg="#f0f4ff", font=("Segoe UI", 10, "bold"))
+        self.resultat_traduction = tk.Text(
+            traducteur, width=35, height=2, wrap="word", state="disabled", bg="#f0f4ff", relief="flat"
+        )
         self.resultat_traduction.pack(side="left", padx=10)
 
         self.bouton_utiliser_traduction = tk.Button(
             traducteur, text="↓ Utiliser dans le formulaire", command=self._utiliser_traduction, state="disabled"
         )
-        self.bouton_utiliser_traduction.pack(side="left", padx=5)
+        self.bouton_utiliser_traduction.pack(side="left", padx=5, anchor="n")
 
         # --- Formulaire d'ajout ---
         form = tk.Frame(self, bg="white")
@@ -65,12 +68,21 @@ class VocabView(tk.Frame):
         tk.Button(form, text="Ajouter", command=self.ajouter_mot).grid(row=1, column=4, padx=10)
 
         # --- Liste des mots ---
-        colonnes = ("mot", "traduction", "theme", "niveau", "prochaine_revision")
-        self.arbre = ttk.Treeview(self, columns=colonnes, show="headings", height=15)
-        for c, largeur in zip(colonnes, (150, 150, 100, 100, 160)):
+        colonnes = ("mot", "traduction", "exemple", "theme", "niveau", "prochaine_revision")
+        self.arbre = ttk.Treeview(self, columns=colonnes, show="headings", height=12)
+        largeurs = {"mot": 120, "traduction": 120, "exemple": 250, "theme": 90, "niveau": 90, "prochaine_revision": 150}
+        for c in colonnes:
             self.arbre.heading(c, text=c.capitalize())
-            self.arbre.column(c, width=largeur)
+            self.arbre.column(c, width=largeurs[c])
         self.arbre.pack(fill="both", expand=True, padx=20, pady=10)
+        self.arbre.bind("<<TreeviewSelect>>", self._afficher_detail_exemple)
+
+        # --- Détail de l'exemple sélectionné (affiche les retours à la ligne) ---
+        detail_frame = tk.Frame(self, bg="white")
+        detail_frame.pack(fill="x", padx=20, pady=(0, 10))
+        tk.Label(detail_frame, text="Exemple complet :", bg="white", font=("Segoe UI", 9, "bold")).pack(anchor="w")
+        self.detail_exemple = tk.Text(detail_frame, height=3, wrap="word", state="disabled", bg="#f5f5f5")
+        self.detail_exemple.pack(fill="x")
 
         bas = tk.Frame(self, bg="white")
         bas.pack(fill="x", padx=20, pady=(0, 20))
@@ -93,34 +105,47 @@ class VocabView(tk.Frame):
         self.entree_exemple.delete("1.0", "end")
         self._rafraichir()
 
+    def _touche_traducteur(self, event):
+        """Entrée seule lance la traduction ; Maj+Entrée insère un retour à la ligne."""
+        if event.state & 0x1:  # touche Maj (Shift) enfoncée
+            return None
+        self.traduire()
+        return "break"
+
     def traduire(self):
-        mot_fr = self.entree_fr.get().strip()
-        if not mot_fr:
+        texte_en = self.entree_source.get("1.0", "end").strip()
+        if not texte_en:
             return
         self.bouton_traduire.config(state="disabled", text="...")
-        self.resultat_traduction.config(text="")
+        self.resultat_traduction.config(state="normal")
+        self.resultat_traduction.delete("1.0", "end")
+        self.resultat_traduction.config(state="disabled")
         self.bouton_utiliser_traduction.config(state="disabled")
 
-        thread = threading.Thread(target=self._traduire_en_arriere_plan, args=(mot_fr,), daemon=True)
+        thread = threading.Thread(target=self._traduire_en_arriere_plan, args=(texte_en,), daemon=True)
         thread.start()
 
-    def _traduire_en_arriere_plan(self, mot_fr):
-        resultat = traduire_mot(mot_fr)
-        self.after(0, self._traiter_traduction, mot_fr, resultat)
+    def _traduire_en_arriere_plan(self, texte_en):
+        resultat = traduire_mot(texte_en)
+        self.after(0, self._traiter_traduction, texte_en, resultat)
 
-    def _traiter_traduction(self, mot_fr, resultat):
+    def _traiter_traduction(self, texte_en, resultat):
         self.bouton_traduire.config(state="normal", text="Traduire")
+        self.resultat_traduction.config(state="normal")
+        self.resultat_traduction.delete("1.0", "end")
 
         if resultat is None:
-            self.resultat_traduction.config(text="Traduction indisponible (vérifie qu'Ollama tourne).", fg="#dc2626")
+            self.resultat_traduction.insert("1.0", "Traduction indisponible (vérifie qu'Ollama tourne).")
+            self.resultat_traduction.config(state="disabled")
             return
 
         self._derniere_traduction = {
-            "mot_fr": mot_fr,
-            "mot_en": resultat["traduction"],
-            "exemple": resultat.get("exemple", "")
+            "texte_en": texte_en,
+            "traduction_fr": resultat["traduction"],
+            "exemple": resultat.get("exemple", "") or texte_en
         }
-        self.resultat_traduction.config(text=f"→ {resultat['traduction']}", fg="#111")
+        self.resultat_traduction.insert("1.0", resultat["traduction"])
+        self.resultat_traduction.config(state="disabled")
         self.bouton_utiliser_traduction.config(state="normal")
 
     def _utiliser_traduction(self):
@@ -128,9 +153,9 @@ class VocabView(tk.Frame):
             return
         infos = self._derniere_traduction
         self.entree_mot.delete(0, tk.END)
-        self.entree_mot.insert(0, infos["mot_en"])
+        self.entree_mot.insert(0, infos["texte_en"])
         self.entree_traduction.delete(0, tk.END)
-        self.entree_traduction.insert(0, infos["mot_fr"])
+        self.entree_traduction.insert(0, infos["traduction_fr"])
         self.entree_exemple.delete("1.0", "end")
         self.entree_exemple.insert("1.0", infos["exemple"])
 
@@ -139,10 +164,24 @@ class VocabView(tk.Frame):
             self.arbre.delete(item)
         for row in models.lister_mots():
             niveau_txt = {0: "Nouveau", 1: "En cours", 2: "Maîtrisé"}[row["niveau_maitrise"]]
+            # Aperçu sur une seule ligne pour le tableau (le détail complet
+            # avec les retours à la ligne s'affiche en dessous à la sélection).
+            exemple_apercu = (row["exemple"] or "").replace("\n", "  ⏎  ")
             self.arbre.insert(
                 "", "end", iid=row["id"],
-                values=(row["mot"], row["traduction"], row["theme"], niveau_txt, row["prochaine_revision"])
+                values=(row["mot"], row["traduction"], exemple_apercu, row["theme"], niveau_txt, row["prochaine_revision"])
             )
+
+    def _afficher_detail_exemple(self, event=None):
+        mot_id = self._selection_id()
+        self.detail_exemple.config(state="normal")
+        self.detail_exemple.delete("1.0", "end")
+        if mot_id is not None:
+            for row in models.lister_mots():
+                if row["id"] == mot_id:
+                    self.detail_exemple.insert("1.0", row["exemple"] or "")
+                    break
+        self.detail_exemple.config(state="disabled")
 
     def _selection_id(self):
         sel = self.arbre.selection()
