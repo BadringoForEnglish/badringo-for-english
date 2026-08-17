@@ -7,7 +7,7 @@ import os
 import json
 
 APP_NAME = "Badringo for English"
-APP_VERSION = "1.6.2"
+APP_VERSION = "1.7.0"
 
 # Dossiers
 # En version .exe (PyInstaller --onefile), le programme s'exécute depuis un
@@ -41,7 +41,8 @@ DEFAULT_SETTINGS = {
     "last_update_check": "",
     "chat_font_family": "Segoe UI",           # police d'affichage du chat
     "chat_font_size": 12,                     # taille d'affichage du chat
-    "conversation_active_id": None            # id de la conversation en cours (persistance)
+    "conversation_active_id": None,           # id de la conversation en cours (persistance)
+    "translation_provider": "ollama"          # "ollama" (local, hors-ligne) ou "google" (internet, plus fiable)
 }
 
 

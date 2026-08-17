@@ -5,5 +5,9 @@
     "ollama_url": "http://localhost:11434",
     "ollama_model": "llama3.2",
     "user_name": "Utilisateur",
-    "last_update_check": ""
+    "last_update_check": "",
+    "chat_font_family": "Segoe UI",
+    "chat_font_size": 12,
+    "conversation_active_id": null,
+    "translation_provider": "ollama"
 }

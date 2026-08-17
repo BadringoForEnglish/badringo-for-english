@@ -9,6 +9,7 @@ from tkinter import ttk, messagebox
 
 from database import models
 from services.ai_service import traduire_mot
+from config import load_settings, save_settings
 
 
 class VocabView(tk.Frame):
@@ -43,6 +44,17 @@ class VocabView(tk.Frame):
             traducteur, text="↓ Utiliser dans le formulaire", command=self._utiliser_traduction, state="disabled"
         )
         self.bouton_utiliser_traduction.pack(side="left", padx=5, anchor="n")
+
+        settings_actuels = load_settings()
+        self.moteur_traduction_var = tk.StringVar(
+            value="Google (internet)" if settings_actuels.get("translation_provider") == "google" else "Ollama (local)"
+        )
+        combo_moteur = ttk.Combobox(
+            traducteur, textvariable=self.moteur_traduction_var,
+            values=["Ollama (local)", "Google (internet)"], width=16, state="readonly"
+        )
+        combo_moteur.pack(side="left", padx=10, anchor="n")
+        combo_moteur.bind("<<ComboboxSelected>>", self._changer_moteur_traduction)
 
         # --- Formulaire d'ajout ---
         form = tk.Frame(self, bg="white")
@@ -104,6 +116,13 @@ class VocabView(tk.Frame):
         self.entree_traduction.delete(0, tk.END)
         self.entree_exemple.delete("1.0", "end")
         self._rafraichir()
+
+    def _changer_moteur_traduction(self, event=None):
+        settings = load_settings()
+        settings["translation_provider"] = (
+            "google" if self.moteur_traduction_var.get() == "Google (internet)" else "ollama"
+        )
+        save_settings(settings)
 
     def _touche_traducteur(self, event):
         """Entrée seule lance la traduction ; Maj+Entrée insère un retour à la ligne."""
