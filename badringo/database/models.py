@@ -185,6 +185,24 @@ def conversation_existe(conversation_id):
 
 # ----------------------- STATISTIQUES -----------------------
 
+# ----------------------- HISTORIQUE DU QUIZ -----------------------
+
+def enregistrer_session_quiz(score, total):
+    conn = get_connection()
+    with conn:
+        conn.execute("INSERT INTO sessions_quiz (score, total) VALUES (?, ?)", (score, total))
+    conn.close()
+
+
+def lister_sessions_quiz(limite=10):
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM sessions_quiz ORDER BY date_session DESC, id DESC LIMIT ?", (limite,)
+    ).fetchall()
+    conn.close()
+    return rows
+
+
 def statistiques():
     conn = get_connection()
     stats = {}

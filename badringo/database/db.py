@@ -72,6 +72,13 @@ CREATE TABLE IF NOT EXISTS sessions (
     sujet TEXT,
     notes TEXT
 );
+
+CREATE TABLE IF NOT EXISTS sessions_quiz (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date_session TEXT DEFAULT (datetime('now')),
+    score INTEGER NOT NULL,
+    total INTEGER NOT NULL
+);
 """
 
 

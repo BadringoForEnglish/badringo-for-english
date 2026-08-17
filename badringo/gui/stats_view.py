@@ -41,3 +41,24 @@ class StatsView(tk.Frame):
 
         for c in range(3):
             grille.columnconfigure(c, weight=1)
+
+        # --- Historique des derniers quiz ---
+        sessions = models.lister_sessions_quiz(limite=5)
+        if sessions:
+            tk.Label(
+                self, text="Derniers quiz", font=("Segoe UI", 13, "bold"), bg="white"
+            ).pack(anchor="w", padx=20, pady=(25, 10))
+
+            historique = tk.Frame(self, bg="white")
+            historique.pack(anchor="w", padx=20, fill="x")
+
+            for s in sessions:
+                pourcentage = round(100 * s["score"] / s["total"]) if s["total"] else 0
+                date_affichee = s["date_session"][:16].replace("T", " ")
+                ligne = tk.Frame(historique, bg="#f9fafb", padx=15, pady=8)
+                ligne.pack(fill="x", pady=2)
+                tk.Label(ligne, text=date_affichee, bg="#f9fafb", fg="#666", width=18, anchor="w").pack(side="left")
+                tk.Label(
+                    ligne, text=f"{s['score']} / {s['total']}  ({pourcentage}%)",
+                    bg="#f9fafb", font=("Segoe UI", 10, "bold")
+                ).pack(side="left")
