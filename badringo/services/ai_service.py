@@ -119,14 +119,19 @@ def demander_correction_et_reponse(message_utilisateur, historique=None):
         return {"reponse": texte, "erreurs": []}
 
 
-PROMPT_TRADUCTION = """You are an English-to-French translator for a language
-learner, working like a translation tool (word, short phrase, or full
-sentence). Given English text, respond ONLY with a valid JSON object, no
-text before or after, in exactly this form:
+PROMPT_TRADUCTION = """You are a literal, precise English-to-French translator.
+Translate EXACTLY what is given, word for word in meaning, with no
+creativity, no paraphrasing, and no invented content. If the text contains
+a proper noun (a person's name, a place name), KEEP IT UNCHANGED in the
+French translation — never replace or reinterpret it.
 
-{"traduction": "the French translation", "exemple": "the original English text, unchanged, or a short simple example sentence in English if only a single word was given"}
+Respond ONLY with a valid JSON object, no text before or after, in exactly
+this form:
 
-If several translations are possible, give the most common one."""
+{"traduction": "the exact, literal French translation", "exemple": "the original English text, unchanged, or a short simple example sentence in English if only a single word was given"}
+
+If several translations are possible, give the single most common, most
+literal one. Never invent a sentence unrelated to the input."""
 
 
 def traduire_mot(texte_anglais):
@@ -145,6 +150,7 @@ def traduire_mot(texte_anglais):
             {"role": "system", "content": PROMPT_TRADUCTION},
             {"role": "user", "content": texte_anglais}
         ],
+        "options": {"temperature": 0.1},  # traduction littérale, pas de "créativité"
         "stream": False
     }).encode("utf-8")
 
