@@ -163,6 +163,46 @@ def analyser_patterns_erreurs(limite=5):
     return rows
 
 
+# ----------------------- MAÎTRISE PAR NOTION -----------------------
+
+def mettre_a_jour_maitrise(notion, correct):
+    """Enregistre le résultat d'une réponse de quiz pour une notion donnée
+    (thème de vocabulaire ou 'Conjugaison'). Crée la notion si elle
+    n'existe pas encore."""
+    if not notion:
+        return
+    conn = get_connection()
+    with conn:
+        conn.execute(
+            """INSERT INTO topic_mastery (notion, nb_reponses, nb_correctes)
+               VALUES (?, 1, ?)
+               ON CONFLICT(notion) DO UPDATE SET
+                   nb_reponses = nb_reponses + 1,
+                   nb_correctes = nb_correctes + excluded.nb_correctes,
+                   derniere_mise_a_jour = datetime('now')""",
+            (notion, 1 if correct else 0)
+        )
+    conn.close()
+
+
+def lister_maitrise_notions(limite=10, minimum_reponses=3):
+    """Renvoie les notions les moins maîtrisées en premier (score le plus
+    bas), en ignorant celles avec trop peu de réponses pour être fiables."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT notion, nb_reponses, nb_correctes,
+                  ROUND(100.0 * nb_correctes / nb_reponses, 0) AS score,
+                  derniere_mise_a_jour
+           FROM topic_mastery
+           WHERE nb_reponses >= ?
+           ORDER BY score ASC, nb_reponses DESC
+           LIMIT ?""",
+        (minimum_reponses, limite)
+    ).fetchall()
+    conn.close()
+    return rows
+
+
 # ----------------------- CONVERSATIONS / CHAT -----------------------
 
 def creer_conversation(sujet=""):

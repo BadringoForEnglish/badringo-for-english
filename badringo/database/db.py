@@ -91,6 +91,18 @@ CREATE TABLE IF NOT EXISTS learner_profile (
     date_debut TEXT DEFAULT (datetime('now')),
     objectif_general TEXT
 );
+
+-- Suivi de la maîtrise par notion (thème de vocabulaire, "Conjugaison"...),
+-- alimenté automatiquement à chaque réponse au quiz. Le score n'est pas
+-- stocké directement : il se calcule à la volée depuis nb_correctes/nb_reponses
+-- pour ne jamais risquer d'être incohérent.
+CREATE TABLE IF NOT EXISTS topic_mastery (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    notion TEXT NOT NULL UNIQUE,
+    nb_reponses INTEGER DEFAULT 0,
+    nb_correctes INTEGER DEFAULT 0,
+    derniere_mise_a_jour TEXT DEFAULT (datetime('now'))
+);
 """
 
 

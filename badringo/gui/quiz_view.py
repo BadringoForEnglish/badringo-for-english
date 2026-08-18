@@ -96,6 +96,7 @@ class QuizView(tk.Frame):
         return {
             "type": "trou",
             "mot_id": mot["id"],
+            "notion": mot["theme"],
             "consigne": "Complète la phrase :",
             "texte": phrase_trouee,
             "options": options,
@@ -121,6 +122,7 @@ class QuizView(tk.Frame):
         return {
             "type": "vocabulaire",
             "mot_id": mot["id"],
+            "notion": mot["theme"],
             "consigne": consigne,
             "texte": texte,
             "options": options,
@@ -147,6 +149,7 @@ class QuizView(tk.Frame):
             questions.append({
                 "type": "conjugaison",
                 "mot_id": None,
+                "notion": "Conjugaison",
                 "consigne": consigne,
                 "texte": "",
                 "options": options,
@@ -247,6 +250,8 @@ class QuizView(tk.Frame):
 
         if question["mot_id"] is not None:
             models.reviser_mot(question["mot_id"], correct)
+
+        models.mettre_a_jour_maitrise(question.get("notion"), correct)
 
         self.bouton_suivant.config(state="normal")
 

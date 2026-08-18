@@ -62,3 +62,30 @@ class StatsView(tk.Frame):
                     ligne, text=f"{s['score']} / {s['total']}  ({pourcentage}%)",
                     bg="#f9fafb", font=("Segoe UI", 10, "bold")
                 ).pack(side="left")
+
+        # --- Notions à travailler en priorité ---
+        notions_faibles = models.lister_maitrise_notions(limite=5, minimum_reponses=3)
+        if notions_faibles:
+            tk.Label(
+                self, text="Notions à travailler", font=("Segoe UI", 13, "bold"), bg="white"
+            ).pack(anchor="w", padx=20, pady=(25, 10))
+
+            zone_notions = tk.Frame(self, bg="white")
+            zone_notions.pack(anchor="w", padx=20, fill="x")
+
+            for n in notions_faibles:
+                score = n["score"]
+                if score < 50:
+                    pastille, couleur = "🔴", "#dc2626"
+                elif score < 80:
+                    pastille, couleur = "🟡", "#d97706"
+                else:
+                    pastille, couleur = "🟢", "#16a34a"
+
+                ligne = tk.Frame(zone_notions, bg="#f9fafb", padx=15, pady=8)
+                ligne.pack(fill="x", pady=2)
+                tk.Label(ligne, text=f"{pastille} {n['notion']}", bg="#f9fafb", width=30, anchor="w").pack(side="left")
+                tk.Label(
+                    ligne, text=f"{score:.0f}%  ({n['nb_correctes']}/{n['nb_reponses']})",
+                    bg="#f9fafb", fg=couleur, font=("Segoe UI", 10, "bold")
+                ).pack(side="left")
