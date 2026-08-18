@@ -7,6 +7,7 @@ import tkinter as tk
 
 from database import models
 from config import APP_NAME
+from services.adaptive_learning import generer_plan_du_jour
 
 
 class StatsView(tk.Frame):
@@ -18,6 +19,25 @@ class StatsView(tk.Frame):
         tk.Label(self, text=f"Bienvenue sur {APP_NAME}", font=("Segoe UI", 18, "bold"), bg="white").pack(
             anchor="w", padx=20, pady=(20, 20)
         )
+
+        # --- Plan du jour (moteur adaptatif, Phase 5) ---
+        plan = generer_plan_du_jour()
+        if plan:
+            tk.Label(
+                self, text="📋 Plan du jour", font=("Segoe UI", 14, "bold"), bg="white"
+            ).pack(anchor="w", padx=20, pady=(0, 10))
+
+            for recommandation in plan:
+                carte = tk.Frame(self, bg="#eff6ff", padx=15, pady=10)
+                carte.pack(fill="x", padx=20, pady=3)
+                tk.Label(
+                    carte, text=recommandation["titre"], bg="#eff6ff",
+                    font=("Segoe UI", 11, "bold"), anchor="w"
+                ).pack(anchor="w")
+                tk.Label(
+                    carte, text=recommandation["detail"], bg="#eff6ff",
+                    fg="#555", font=("Segoe UI", 9), anchor="w", wraplength=800, justify="left"
+                ).pack(anchor="w")
 
         stats = models.statistiques()
 
