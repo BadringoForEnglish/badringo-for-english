@@ -203,6 +203,30 @@ def lister_sessions_quiz(limite=10):
     return rows
 
 
+# ----------------------- PROFIL APPRENANT -----------------------
+
+def obtenir_profil():
+    """Renvoie la ligne unique du profil (toujours id=1, créée au démarrage)."""
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM learner_profile WHERE id = 1").fetchone()
+    conn.close()
+    return row
+
+
+def enregistrer_profil(prenom, langue_maternelle, objectif_general):
+    """Met à jour les champs saisissables du profil (le niveau estimé n'est
+    JAMAIS modifié ici : il sera calculé automatiquement en Phase 7)."""
+    conn = get_connection()
+    with conn:
+        conn.execute(
+            """UPDATE learner_profile
+               SET prenom = ?, langue_maternelle = ?, objectif_general = ?
+               WHERE id = 1""",
+            (prenom, langue_maternelle, objectif_general)
+        )
+    conn.close()
+
+
 def statistiques():
     conn = get_connection()
     stats = {}

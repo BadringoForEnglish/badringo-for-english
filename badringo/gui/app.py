@@ -15,6 +15,7 @@ from gui.grammar_view import GrammarView
 from gui.errors_view import ErrorsView
 from gui.chat_view import ChatView
 from gui.stats_view import StatsView
+from gui.profile_view import ProfileView
 from gui.quiz_view import QuizView
 import updater
 
@@ -53,6 +54,7 @@ class BadringoApp(tk.Tk):
         titre.pack(fill="x")
 
         boutons = [
+            ("🎓 Mon profil", "profil"),
             ("📊 Tableau de bord", "stats"),
             ("📚 Vocabulaire", "vocab"),
             ("📖 Grammaire & Conjugaison", "grammar"),
@@ -214,6 +216,7 @@ class BadringoApp(tk.Tk):
             widget.destroy()
 
         classes = {
+            "profil": ProfileView,
             "stats": StatsView,
             "vocab": VocabView,
             "grammar": GrammarView,

@@ -79,6 +79,18 @@ CREATE TABLE IF NOT EXISTS sessions_quiz (
     score INTEGER NOT NULL,
     total INTEGER NOT NULL
 );
+
+-- Une seule ligne (id=1) : le profil pédagogique de l'apprenant.
+-- niveau_estime reste vide tant que la Phase 7 (Skill Assessment) n'est
+-- pas en place : il ne doit pas être renseigné manuellement.
+CREATE TABLE IF NOT EXISTS learner_profile (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    prenom TEXT,
+    niveau_estime TEXT,
+    langue_maternelle TEXT DEFAULT 'Français',
+    date_debut TEXT DEFAULT (datetime('now')),
+    objectif_general TEXT
+);
 """
 
 
@@ -93,4 +105,9 @@ def init_db():
             conn.execute("ALTER TABLE regles_grammaire ADD COLUMN commentaire TEXT")
     except Exception:
         pass  # colonne déjà existante
+
+    # Crée la ligne unique du profil apprenant si elle n'existe pas encore
+    with conn:
+        conn.execute("INSERT OR IGNORE INTO learner_profile (id) VALUES (1)")
+
     conn.close()
