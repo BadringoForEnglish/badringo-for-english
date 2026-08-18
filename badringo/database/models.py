@@ -136,6 +136,33 @@ def lister_erreurs():
     return rows
 
 
+def analyser_patterns_erreurs(limite=5):
+    """
+    Regroupe les erreurs enregistrées par notion (la règle de grammaire liée
+    si elle existe, sinon l'explication donnée par l'IA), pour faire
+    ressortir les erreurs les plus récurrentes. Calculé à la volée à partir
+    de la table 'erreurs' existante : aucune donnée dupliquée, toujours à
+    jour automatiquement.
+    """
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT
+               COALESCE(rg.titre, erreurs.explication) AS notion,
+               COUNT(*) AS frequence,
+               MAX(erreurs.date_ajout) AS derniere_occurrence
+           FROM erreurs
+           LEFT JOIN regles_grammaire rg ON erreurs.regle_id = rg.id
+           WHERE COALESCE(rg.titre, erreurs.explication) IS NOT NULL
+             AND COALESCE(rg.titre, erreurs.explication) != ''
+           GROUP BY LOWER(COALESCE(rg.titre, erreurs.explication))
+           ORDER BY frequence DESC, derniere_occurrence DESC
+           LIMIT ?""",
+        (limite,)
+    ).fetchall()
+    conn.close()
+    return rows
+
+
 # ----------------------- CONVERSATIONS / CHAT -----------------------
 
 def creer_conversation(sujet=""):
