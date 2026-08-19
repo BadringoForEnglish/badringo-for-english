@@ -17,6 +17,7 @@ from gui.chat_view import ChatView
 from gui.stats_view import StatsView
 from gui.profile_view import ProfileView
 from gui.quiz_view import QuizView
+from gui.surprise_review_view import SurpriseReviewView
 import updater
 
 COULEURS = {
@@ -60,6 +61,7 @@ class BadringoApp(tk.Tk):
             ("📖 Grammaire & Conjugaison", "grammar"),
             ("📝 Journal d'erreurs", "errors"),
             ("🎯 Quiz", "quiz"),
+            ("🎲 Révision surprise", "surprise"),
             ("💬 Chat / Pratique", "chat"),
         ]
         for label, cle in boutons:
@@ -222,6 +224,7 @@ class BadringoApp(tk.Tk):
             "grammar": GrammarView,
             "errors": ErrorsView,
             "quiz": QuizView,
+            "surprise": SurpriseReviewView,
             "chat": ChatView,
         }
         vue_class = classes[cle]
