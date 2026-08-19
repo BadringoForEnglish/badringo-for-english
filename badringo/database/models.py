@@ -282,7 +282,8 @@ def obtenir_profil():
 
 def enregistrer_profil(prenom, langue_maternelle, objectif_general):
     """Met à jour les champs saisissables du profil (le niveau estimé n'est
-    JAMAIS modifié ici : il sera calculé automatiquement en Phase 7)."""
+    JAMAIS modifié ici : voir mettre_a_jour_niveau_estime, utilisée
+    uniquement par le Skill Assessment automatique)."""
     conn = get_connection()
     with conn:
         conn.execute(
@@ -291,6 +292,15 @@ def enregistrer_profil(prenom, langue_maternelle, objectif_general):
                WHERE id = 1""",
             (prenom, langue_maternelle, objectif_general)
         )
+    conn.close()
+
+
+def mettre_a_jour_niveau_estime(niveau):
+    """Écrit le niveau calculé automatiquement par le Skill Assessment
+    (Phase 7). Jamais appelée depuis un formulaire saisi à la main."""
+    conn = get_connection()
+    with conn:
+        conn.execute("UPDATE learner_profile SET niveau_estime = ? WHERE id = 1", (niveau,))
     conn.close()
 
 
