@@ -304,6 +304,40 @@ def mettre_a_jour_niveau_estime(niveau):
     conn.close()
 
 
+# ----------------------- DASHBOARD QUOTIDIEN -----------------------
+
+def jours_actifs():
+    """Renvoie l'ensemble des dates (AAAA-MM-JJ) où une activité a eu lieu
+    dans l'app (quiz, chat, vocabulaire ajouté, erreur enregistrée) —
+    utilisé pour calculer le streak, sans nouvelle table de log."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT date(date_session) AS jour FROM sessions_quiz
+           UNION
+           SELECT date(date_envoi) FROM messages
+           UNION
+           SELECT date(date_ajout) FROM mots
+           UNION
+           SELECT date(date_ajout) FROM erreurs"""
+    ).fetchall()
+    conn.close()
+    return {r["jour"] for r in rows if r["jour"]}
+
+
+def sessions_quiz_recentes(jours=14):
+    """Renvoie les sessions de quiz des N derniers jours (score, total,
+    date), pour calculer une tendance de progression."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT score, total, date_session FROM sessions_quiz
+           WHERE date_session >= date('now', ?)
+           ORDER BY date_session ASC""",
+        (f"-{jours} days",)
+    ).fetchall()
+    conn.close()
+    return rows
+
+
 def statistiques():
     conn = get_connection()
     stats = {}

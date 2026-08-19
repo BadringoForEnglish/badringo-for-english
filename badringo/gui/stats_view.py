@@ -8,6 +8,7 @@ import tkinter as tk
 from database import models
 from config import APP_NAME
 from services.adaptive_learning import generer_plan_du_jour
+from services.daily_dashboard import calculer_streak, calculer_progression_recente
 
 
 class StatsView(tk.Frame):
@@ -16,9 +17,34 @@ class StatsView(tk.Frame):
         self._build()
 
     def _build(self):
-        tk.Label(self, text=f"Bienvenue sur {APP_NAME}", font=("Segoe UI", 18, "bold"), bg="white").pack(
-            anchor="w", padx=20, pady=(20, 20)
+        profil = models.obtenir_profil()
+        prenom = profil["prenom"] if profil and profil["prenom"] else None
+        salutation = f"👋 Bonjour {prenom} !" if prenom else f"Bienvenue sur {APP_NAME}"
+
+        tk.Label(self, text=salutation, font=("Segoe UI", 18, "bold"), bg="white").pack(
+            anchor="w", padx=20, pady=(20, 5)
         )
+
+        # --- Streak et tendance de progression ---
+        streak = calculer_streak()
+        progression = calculer_progression_recente()
+
+        indicateurs = tk.Frame(self, bg="white")
+        indicateurs.pack(anchor="w", padx=20, pady=(0, 15))
+
+        if streak > 0:
+            tk.Label(
+                indicateurs, text=f"🔥 {streak} jour{'s' if streak > 1 else ''} d'affilée",
+                bg="white", font=("Segoe UI", 10, "bold"), fg="#ea580c"
+            ).pack(side="left", padx=(0, 20))
+
+        if progression is not None:
+            signe = "+" if progression >= 0 else ""
+            couleur = "#16a34a" if progression >= 0 else "#dc2626"
+            tk.Label(
+                indicateurs, text=f"{signe}{progression}% cette semaine (vs la précédente)",
+                bg="white", font=("Segoe UI", 10, "bold"), fg=couleur
+            ).pack(side="left")
 
         # --- Plan du jour (moteur adaptatif, Phase 5) ---
         plan = generer_plan_du_jour()
