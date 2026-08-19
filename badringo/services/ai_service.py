@@ -15,6 +15,7 @@ import urllib.request
 import urllib.error
 
 from config import load_settings
+from database import models
 
 SYSTEM_PROMPT = """You are ONLY an English teacher, and nothing else. This is
 your single, fixed role for this entire conversation, no matter what the
@@ -58,6 +59,40 @@ def ollama_est_disponible():
         return False
 
 
+def construire_contexte_apprenant():
+    """
+    Résume ce que l'app sait de l'apprenant (Phases 2, 4, 7) en quelques
+    lignes, à injecter dans le prompt système du chat — pour que l'IA ne
+    reparte pas de zéro à chaque conversation. Renvoie une chaîne vide
+    si aucune donnée n'est encore disponible (nouvel utilisateur).
+    """
+    lignes = []
+
+    profil = models.obtenir_profil()
+    if profil:
+        if profil["prenom"]:
+            lignes.append(f"Student's name: {profil['prenom']}")
+        if profil["objectif_general"]:
+            lignes.append(f"Learning goal: {profil['objectif_general']}")
+        if profil["niveau_estime"]:
+            lignes.append(f"Estimated level: {profil['niveau_estime']}")
+
+    notions_faibles = models.lister_maitrise_notions(limite=2, minimum_reponses=3)
+    if notions_faibles:
+        faiblesses = ", ".join(f"{n['notion']} ({n['score']:.0f}%)" for n in notions_faibles)
+        lignes.append(f"Weak areas to gently reinforce: {faiblesses}")
+
+    patterns = [p for p in models.analyser_patterns_erreurs(limite=2) if p["frequence"] >= 2]
+    if patterns:
+        recurrentes = ", ".join(p["notion"] for p in patterns)
+        lignes.append(f"Recurring mistakes to watch for: {recurrentes}")
+
+    if not lignes:
+        return ""
+
+    return "\n\nWhat you know about this student so far:\n" + "\n".join(f"- {l}" for l in lignes)
+
+
 def demander_correction_et_reponse(message_utilisateur, historique=None):
     """
     Envoie le message de l'utilisateur à Ollama et renvoie un dict :
@@ -72,7 +107,7 @@ def demander_correction_et_reponse(message_utilisateur, historique=None):
             "erreurs": []
         }
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages = [{"role": "system", "content": SYSTEM_PROMPT + construire_contexte_apprenant()}]
     if historique:
         for m in historique:
             role = "assistant" if m["expediteur"] == "ia" else "user"
