@@ -15,6 +15,11 @@ import tkinter as tk
 
 from database import models
 from services.conjugaison import VERBES_IRREGULIERS
+from services.quiz_adaptatif import (
+    construire_questions_vrai_faux,
+    construire_questions_correction,
+    ponderer_par_maitrise,
+)
 
 NB_QUESTIONS_MAX = 10
 NB_CHOIX = 4
@@ -34,7 +39,35 @@ class QuizView(tk.Frame):
         self.index_question = 0
         self.score = 0
         self.bouton_selectionne = None
+        self.mode_apprentissage = True  # par défaut : correction immédiate
+        self.historique_reponses = []
 
+        self._afficher_choix_mode()
+
+    # ------------------------------------------------------------------
+    def _afficher_choix_mode(self):
+        tk.Label(self, text="Quiz", font=("Segoe UI", 16, "bold"), bg="white").pack(
+            anchor="w", padx=20, pady=(20, 10)
+        )
+        tk.Label(
+            self, text="Comment veux-tu procéder ?", bg="white", font=("Segoe UI", 12)
+        ).pack(pady=(30, 15))
+
+        boutons = tk.Frame(self, bg="white")
+        boutons.pack()
+        tk.Button(
+            boutons, text="📖 Mode Apprentissage\n(correction immédiate)", font=("Segoe UI", 11),
+            width=28, pady=15, command=lambda: self._demarrer_quiz(True)
+        ).pack(side="left", padx=10)
+        tk.Button(
+            boutons, text="📝 Mode Test\n(résultats à la fin)", font=("Segoe UI", 11),
+            width=28, pady=15, command=lambda: self._demarrer_quiz(False)
+        ).pack(side="left", padx=10)
+
+    def _demarrer_quiz(self, mode_apprentissage):
+        self.mode_apprentissage = mode_apprentissage
+        for widget in self.winfo_children():
+            widget.destroy()
         self._build_layout()
         self._afficher_question()
 
@@ -45,6 +78,8 @@ class QuizView(tk.Frame):
         questions = []
         questions += self._construire_questions_vocabulaire()
         questions += self._construire_questions_conjugaison()
+        questions += construire_questions_vrai_faux(nb_max=2)
+        questions += construire_questions_correction(nb_max=2)
         random.shuffle(questions)
         return questions[:NB_QUESTIONS_MAX]
 
@@ -59,9 +94,26 @@ class QuizView(tk.Frame):
         autres = [m for m in tous_mots if m["id"] not in ids_dus]
         mots_ordonnes = dus + autres
 
+        # Pondère ensuite par maîtrise : les thèmes faibles ont plus de
+        # chances d'être tirés (amélioration demandée : "plus de questions
+        # sur les compétences faibles").
+        pool_pondere = ponderer_par_maitrise(mots_ordonnes)
+        random.shuffle(pool_pondere)
+
         nb_a_generer = min(NB_QUESTIONS_MAX - NB_QUESTIONS_CONJUGAISON, len(mots_ordonnes))
         nb_a_generer = max(nb_a_generer, 0)
-        mots_choisis = mots_ordonnes[:nb_a_generer]
+
+        # Choisit des mots distincts (pas de doublon dans une même session),
+        # même si le pool pondéré contient des répétitions du même mot.
+        mots_choisis = []
+        ids_deja_choisis = set()
+        for mot in pool_pondere:
+            if mot["id"] in ids_deja_choisis:
+                continue
+            mots_choisis.append(mot)
+            ids_deja_choisis.add(mot["id"])
+            if len(mots_choisis) >= nb_a_generer:
+                break
 
         questions = []
         for mot in mots_choisis:
@@ -233,20 +285,37 @@ class QuizView(tk.Frame):
         option_choisie = question["options"][index_bouton]
         correct = option_choisie == question["reponse"]
 
+        self.historique_reponses.append({
+            "consigne": question["consigne"],
+            "texte": question["texte"],
+            "reponse_utilisateur": option_choisie,
+            "bonne_reponse": question["reponse"],
+            "correct": correct,
+        })
+
         for i, btn in enumerate(self.boutons_choix):
             btn.config(state="disabled")
-            if question["options"][i] == question["reponse"]:
-                btn.config(bg="#bbf7d0")
-            elif i == index_bouton:
-                btn.config(bg="#fecaca")
+            if self.mode_apprentissage:
+                if question["options"][i] == question["reponse"]:
+                    btn.config(bg="#bbf7d0")
+                elif i == index_bouton:
+                    btn.config(bg="#fecaca")
 
         if correct:
             self.score += 1
-            self.feedback_label.config(text="✔ Bonne réponse !", fg="#16a34a")
+            if self.mode_apprentissage:
+                self.feedback_label.config(text="✔ Bonne réponse !", fg="#16a34a")
         else:
-            self.feedback_label.config(
-                text=f"✘ La bonne réponse était : {question['reponse']}", fg="#dc2626"
+            if self.mode_apprentissage:
+                self.feedback_label.config(
+                    text=f"✘ La bonne réponse était : {question['reponse']}", fg="#dc2626"
+                )
+            models.enregistrer_erreur_quiz(
+                question.get("notion"), question["texte"], option_choisie, question["reponse"]
             )
+
+        if not self.mode_apprentissage:
+            self.feedback_label.config(text="Réponse enregistrée.", fg="#666")
 
         if question["mot_id"] is not None:
             models.reviser_mot(question["mot_id"], correct)
@@ -283,10 +352,42 @@ class QuizView(tk.Frame):
         )
         tk.Label(self, text=message, font=("Segoe UI", 12), bg="white", fg="#666").pack(pady=5)
 
-        tk.Button(
-            self, text="Refaire un quiz", font=("Segoe UI", 11),
-            command=self._recommencer
-        ).pack(pady=20)
+        boutons_fin = tk.Frame(self, bg="white")
+        boutons_fin.pack(pady=20)
+
+        tk.Button(boutons_fin, text="Refaire un quiz", font=("Segoe UI", 11), command=self._recommencer).pack(
+            side="left", padx=5
+        )
+
+        fautes = [r for r in self.historique_reponses if not r["correct"]]
+        if fautes:
+            tk.Button(
+                boutons_fin, text=f"Réviser mes fautes ({len(fautes)})", font=("Segoe UI", 11),
+                command=lambda: self._afficher_revue_fautes(fautes)
+            ).pack(side="left", padx=5)
+
+    def _afficher_revue_fautes(self, fautes):
+        for widget in self.winfo_children():
+            widget.destroy()
+
+        tk.Label(self, text="Réviser mes fautes", font=("Segoe UI", 16, "bold"), bg="white").pack(
+            anchor="w", padx=20, pady=(20, 10)
+        )
+
+        zone = tk.Frame(self, bg="white")
+        zone.pack(fill="both", expand=True, padx=20)
+
+        for f in fautes:
+            carte = tk.Frame(zone, bg="#fff7ed", padx=15, pady=10)
+            carte.pack(fill="x", pady=4)
+            tk.Label(carte, text=f["consigne"], bg="#fff7ed", fg="#666", font=("Segoe UI", 9)).pack(anchor="w")
+            tk.Label(carte, text=f["texte"], bg="#fff7ed", font=("Segoe UI", 11, "bold"), wraplength=800, justify="left").pack(anchor="w")
+            tk.Label(
+                carte, text=f"Ta réponse : {f['reponse_utilisateur']}   →   Bonne réponse : {f['bonne_reponse']}",
+                bg="#fff7ed", fg="#92400e", font=("Segoe UI", 10)
+            ).pack(anchor="w", pady=(3, 0))
+
+        tk.Button(self, text="Refaire un quiz", font=("Segoe UI", 11), command=self._recommencer).pack(pady=20)
 
     def _recommencer(self):
         for widget in self.winfo_children():
@@ -297,5 +398,5 @@ class QuizView(tk.Frame):
             return
         self.index_question = 0
         self.score = 0
-        self._build_layout()
-        self._afficher_question()
+        self.historique_reponses = []
+        self._afficher_choix_mode()

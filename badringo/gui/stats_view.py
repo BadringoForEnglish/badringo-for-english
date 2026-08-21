@@ -132,6 +132,7 @@ class StatsView(tk.Frame):
                 ligne.pack(fill="x", pady=2)
                 tk.Label(ligne, text=f"{pastille} {n['notion']}", bg="#f9fafb", width=30, anchor="w").pack(side="left")
                 tk.Label(
-                    ligne, text=f"{score:.0f}%  ({n['nb_correctes']}/{n['nb_reponses']})",
+                    ligne,
+                    text=f"{score:.0f}%  ({n['nb_correctes']}/{n['nb_reponses']})  •  {models.libelle_maitrise(score)}",
                     bg="#f9fafb", fg=couleur, font=("Segoe UI", 10, "bold")
                 ).pack(side="left")

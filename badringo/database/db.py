@@ -101,7 +101,20 @@ CREATE TABLE IF NOT EXISTS topic_mastery (
     notion TEXT NOT NULL UNIQUE,
     nb_reponses INTEGER DEFAULT 0,
     nb_correctes INTEGER DEFAULT 0,
+    intervalle_jours INTEGER DEFAULT 1,
+    prochaine_revision TEXT DEFAULT (datetime('now')),
     derniere_mise_a_jour TEXT DEFAULT (datetime('now'))
+);
+
+-- Fautes individuelles commises au quiz (question précise, pas juste
+-- l'agrégat par notion) : permet le bouton "Réviser mes fautes".
+CREATE TABLE IF NOT EXISTS quiz_erreurs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    notion TEXT,
+    question TEXT NOT NULL,
+    reponse_utilisateur TEXT,
+    bonne_reponse TEXT NOT NULL,
+    date_ajout TEXT DEFAULT (datetime('now'))
 );
 """
 
@@ -117,6 +130,24 @@ def init_db():
             conn.execute("ALTER TABLE regles_grammaire ADD COLUMN commentaire TEXT")
     except Exception:
         pass  # colonne déjà existante
+
+    try:
+        with conn:
+            conn.execute("ALTER TABLE topic_mastery ADD COLUMN intervalle_jours INTEGER DEFAULT 1")
+    except Exception:
+        pass  # colonne déjà existante
+
+    try:
+        with conn:
+            # SQLite interdit datetime('now') comme valeur par défaut dans un
+            # ALTER TABLE (seules les constantes littérales sont acceptées) :
+            # on ajoute la colonne sans défaut, puis on l'initialise ci-dessous.
+            conn.execute("ALTER TABLE topic_mastery ADD COLUMN prochaine_revision TEXT")
+    except Exception:
+        pass  # colonne déjà existante
+
+    with conn:
+        conn.execute("UPDATE topic_mastery SET prochaine_revision = datetime('now') WHERE prochaine_revision IS NULL")
 
     # Crée la ligne unique du profil apprenant si elle n'existe pas encore
     with conn:

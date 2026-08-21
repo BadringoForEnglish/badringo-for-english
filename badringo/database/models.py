@@ -165,24 +165,100 @@ def analyser_patterns_erreurs(limite=5):
 
 # ----------------------- MAÎTRISE PAR NOTION -----------------------
 
+ECHELLE_REVISION_NOTIONS = [1, 3, 7, 14, 30]  # jours, demandé dans le cahier des charges
+
+
+def _prochain_intervalle_notion(intervalle_actuel, correct):
+    if not correct:
+        return 1
+    if intervalle_actuel not in ECHELLE_REVISION_NOTIONS:
+        return 3
+    idx = ECHELLE_REVISION_NOTIONS.index(intervalle_actuel)
+    if idx < len(ECHELLE_REVISION_NOTIONS) - 1:
+        return ECHELLE_REVISION_NOTIONS[idx + 1]
+    return ECHELLE_REVISION_NOTIONS[-1]
+
+
 def mettre_a_jour_maitrise(notion, correct):
     """Enregistre le résultat d'une réponse de quiz pour une notion donnée
     (thème de vocabulaire ou 'Conjugaison'). Crée la notion si elle
-    n'existe pas encore."""
+    n'existe pas encore. Fait aussi progresser l'échelle de répétition
+    espacée 1 -> 3 -> 7 -> 14 -> 30 jours (retour à 1 jour en cas de
+    faute)."""
     if not notion:
         return
     conn = get_connection()
+    ligne = conn.execute("SELECT intervalle_jours FROM topic_mastery WHERE notion = ?", (notion,)).fetchone()
+    intervalle_actuel = ligne["intervalle_jours"] if ligne else 1
+    nouvel_intervalle = _prochain_intervalle_notion(intervalle_actuel, correct)
+
     with conn:
         conn.execute(
-            """INSERT INTO topic_mastery (notion, nb_reponses, nb_correctes)
-               VALUES (?, 1, ?)
+            """INSERT INTO topic_mastery (notion, nb_reponses, nb_correctes, intervalle_jours, prochaine_revision)
+               VALUES (?, 1, ?, ?, datetime('now', ? || ' days'))
                ON CONFLICT(notion) DO UPDATE SET
                    nb_reponses = nb_reponses + 1,
                    nb_correctes = nb_correctes + excluded.nb_correctes,
+                   intervalle_jours = ?,
+                   prochaine_revision = datetime('now', ? || ' days'),
                    derniere_mise_a_jour = datetime('now')""",
-            (notion, 1 if correct else 0)
+            (notion, 1 if correct else 0, nouvel_intervalle, nouvel_intervalle,
+             nouvel_intervalle, nouvel_intervalle)
         )
     conn.close()
+
+
+def notions_dues(limite=10):
+    """Notions dont la prochaine révision (répétition espacée) est
+    arrivée à échéance."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT notion, nb_reponses, nb_correctes,
+                  ROUND(100.0 * nb_correctes / nb_reponses, 0) AS score,
+                  intervalle_jours, prochaine_revision
+           FROM topic_mastery
+           WHERE prochaine_revision <= datetime('now')
+           ORDER BY prochaine_revision ASC
+           LIMIT ?""",
+        (limite,)
+    ).fetchall()
+    conn.close()
+    return rows
+
+
+def libelle_maitrise(score):
+    """Traduit un score % en étiquette de maîtrise (cahier des charges)."""
+    if score is None:
+        return "Non évalué"
+    if score < 40:
+        return "Weak"
+    if score < 60:
+        return "Developing"
+    if score < 75:
+        return "Improving"
+    if score < 90:
+        return "Strong"
+    return "Mastered"
+
+
+def enregistrer_erreur_quiz(notion, question, reponse_utilisateur, bonne_reponse):
+    conn = get_connection()
+    with conn:
+        conn.execute(
+            """INSERT INTO quiz_erreurs (notion, question, reponse_utilisateur, bonne_reponse)
+               VALUES (?, ?, ?, ?)""",
+            (notion, question, reponse_utilisateur, bonne_reponse)
+        )
+    conn.close()
+
+
+def lister_erreurs_quiz(limite=20):
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM quiz_erreurs ORDER BY date_ajout DESC LIMIT ?", (limite,)
+    ).fetchall()
+    conn.close()
+    return rows
 
 
 def lister_maitrise_notions(limite=10, minimum_reponses=3):
